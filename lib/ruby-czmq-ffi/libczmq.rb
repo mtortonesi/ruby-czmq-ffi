@@ -40,4 +40,11 @@ module LibCZMQ
   attach_function :zsocket_poll, [:pointer, :int], :bool
   attach_function :zsocket_type_str, [:pointer], :pointer
   attach_function :zsocket_sendmem, [:pointer, :pointer, :size_t, :int], :int
+
+  attach_function :zstr_recv, [:pointer], :pointer
+  attach_function :zstr_recv_nowait, [:pointer], :pointer
+  attach_function :zstr_send, [:pointer, :string, :varargs], :int
+  attach_function :zstr_sendm, [:pointer, :string, :varargs], :int
+  attach_function :zstr_sendx, [:pointer, :string, :varargs], :int
+  attach_function :zstr_recvx, [:pointer, :pointer, :varargs], :int
 end
