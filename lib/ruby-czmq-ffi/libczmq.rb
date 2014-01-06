@@ -13,11 +13,11 @@ module LibCZMQ
 
   attach_function :zctx_new, [], :pointer
   attach_function :zctx_destroy, [:pointer], :void
-  attach_function :zctx_set_io_threads, [:pointer, :int], :void
+  attach_function :zctx_set_iothreads, [:pointer, :int], :void
   attach_function :zctx_set_linger, [:pointer, :int], :void
   attach_function :zctx_set_pipehwm, [:pointer, :int], :void
-  attach_function :zctx_set_sendhwm, [:pointer, :int], :void
-  attach_function :zctx_set_recvhwm, [:pointer, :int], :void
+  attach_function :zctx_set_sndhwm, [:pointer, :int], :void
+  attach_function :zctx_set_rcvhwm, [:pointer, :int], :void
   attach_function :zctx_underlying, [:pointer], :pointer
 
   attach_function :zbeacon_new, [:int], :pointer
