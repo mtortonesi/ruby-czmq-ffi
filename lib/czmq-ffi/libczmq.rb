@@ -258,6 +258,7 @@ module LibCZMQ
   attach_function :zpoller_new, [:pointer, :varargs], :pointer
   attach_function :__zpoller_destroy, :zpoller_destroy, [:pointer], :void
   attach_function :zpoller_wait, [:pointer, :int], :pointer
+  attach_function :zpoller_add, [:pointer, :pointer], :int
   attach_function :zpoller_expired, [:pointer], :bool
   attach_function :zpoller_terminated, [:pointer], :bool
 
