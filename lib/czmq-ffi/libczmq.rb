@@ -9,10 +9,13 @@ module LibCZMQ
     CZMQ_LIB_PATH = LIB_PATH.map{ |path| "#{path}/libczmq.#{FFI::Platform::LIBSUFFIX}" }
     ffi_lib(CZMQ_LIB_PATH + %w{libzmq})
   rescue LoadError
-    warn "Could not load the CZMQ Library."
+    warn 'Could not load the CZMQ Library.'
     raise
   end
 
+  ##################################################
+  # zctx-related functions
+  ##################################################
   attach_function :zctx_new, [], :pointer
   attach_function :__zctx_destroy, :zctx_destroy, [:pointer], :void
   attach_function :zctx_set_iothreads, [:pointer, :int], :void
@@ -29,7 +32,10 @@ module LibCZMQ
   end
 
 
-  attach_function :zbeacon_new, [:int], :pointer
+  ##################################################
+  # zbeacon-related functions
+  ##################################################
+  attach_function :zbeacon_new, [:int], :pointer # zbeacon_new returns NULL in case of failure
   attach_function :__zbeacon_destroy, :zbeacon_destroy, [:pointer], :void
   attach_function :zbeacon_hostname, [:pointer], :pointer
   attach_function :zbeacon_set_interval, [:pointer, :int], :void
@@ -47,6 +53,9 @@ module LibCZMQ
   end
 
 
+  ##################################################
+  # zsocket-related functions
+  ##################################################
   attach_function :zsocket_new, [:pointer, :int], :pointer
   attach_function :zsocket_destroy, [:pointer, :pointer], :void
   attach_function :zsocket_bind, [:pointer, :string, :varargs], :int
@@ -64,12 +73,15 @@ module LibCZMQ
   end
 
 
+  ##################################################
+  # zstr-related functions
+  ##################################################
   attach_function :__zstr_recv, :zstr_recv, [:pointer], :pointer
   attach_function :__zstr_recv_nowait, :zstr_recv_nowait, [:pointer], :pointer
   attach_function :zstr_send, [:pointer, :string, :varargs], :int
   attach_function :zstr_sendm, [:pointer, :string, :varargs], :int
   attach_function :zstr_sendx, [:pointer, :string, :varargs], :int
-  attach_function :zstr_recvx, [:pointer, :pointer, :varargs], :int
+  # attach_function :__zstr_recvx, :zstr_recvx, [:pointer, :pointer, :varargs], :int
 
   def self.zstr_recv(zsocket)
     Utils.extract_string(__zstr_recv(zsocket))
@@ -77,6 +89,145 @@ module LibCZMQ
 
   def self.zstr_recv_nowait(zsocket)
     Utils.extract_string(__zstr_recv_nowait(zsocket))
+  end
+
+
+  ##################################################
+  # zmsg-related functions
+  ##################################################
+  attach_function :zmsg_new, [], :pointer
+  attach_function :__zmsg_destroy, :zmsg_destroy, [:pointer], :void
+  attach_function :zmsg_recv, [:pointer], :pointer
+  attach_function :__zmsg_send, :zmsg_send, [:pointer, :pointer], :int
+  attach_function :zmsg_size, [:pointer], :size_t
+  attach_function :zmsg_content_size, [:pointer], :size_t
+  attach_function :zmsg_push, [:pointer, :pointer], :int
+  attach_function :zmsg_pop, [:pointer], :pointer
+  # NOTE: zmsg_append will take ownership of zframe and destroy it at the end
+  attach_function :__zmsg_append, :zmsg_append, [:pointer, :pointer], :int
+  attach_function :__zmsg_pushmem, :zmsg_pushmem, [:pointer, :buffer_in, :size_t], :int
+  attach_function :__zmsg_addmem, :zmsg_addmem, [:pointer, :buffer_in, :size_t], :int
+  attach_function :zmsg_pushstr, [:pointer, :string, :varargs], :int
+  attach_function :zmsg_addstr, [:pointer, :string, :varargs], :int
+  attach_function :__zmsg_popstr, :zmsg_popstr, [:pointer], :pointer
+  # NOTE: zmsg will take ownership of zframe and destroy it at the end
+  attach_function :zmsg_wrap, [:pointer, :pointer], :void
+  attach_function :zmsg_unwrap, [:pointer], :pointer
+  attach_function :zmsg_remove, [:pointer, :pointer], :void
+  attach_function :zmsg_first, [:pointer], :pointer
+  attach_function :zmsg_next, [:pointer], :pointer
+  attach_function :zmsg_last, [:pointer], :pointer
+
+  # TODO: implement zmsg_encode and zmsg_decode?
+
+  attach_function :zmsg_dup, [:pointer], :pointer
+  attach_function :zmsg_dump, [:pointer], :void
+
+  # These are very low-level functions. Still unsure whether czmq-ffi should provide them.
+  # attach_function :zmsg_save, [:pointer, :pointer], :int
+  # attach_function :zmsg_load, [:pointer, :pointer], :pointer
+  # attach_function :zmsg_dump_to_stream, [:pointer, :pointer], :void
+
+  # NOTE: zmsg_add is deprecated. No point in supporting it.
+  # attach_function :zmsg_add, [:pointer, :pointer], :int
+
+  def self.zmsg_destroy(zmsg)
+    zmsg_ptr = FFI::MemoryPointer.new(:pointer)
+    zmsg_ptr.write_pointer(zmsg)
+    __zmsg_destroy(zmsg_ptr)
+  end
+
+  def self.zmsg_send(zmsg, zsocket)
+    zmsg_ptr = FFI::MemoryPointer.new(:pointer)
+    zmsg_ptr.write_pointer(zmsg)
+    __zmsg_send(zmsg_ptr, zsocket)
+  end
+
+  # zmsg will take ownership of zframe and destroy it at the end
+  def self.zmsg_append(zmsg, zframe)
+    zframe_ptr = FFI::MemoryPointer.new(:pointer)
+    zframe_ptr.write_pointer(zframe)
+    __zmsg_append(zmsg, zframe_ptr)
+  end
+
+  def self.zmsg_pushmem(zmsg, byte_array)
+    rc = nil
+    FFI::MemoryPointer.new(:uint8, byte_array.size) do |p|
+      p.write_array_of_int8(byte_array)
+      rc = __zmsg_pushmem(zmsg, p, byte_array.size)
+    end
+    rc
+  end
+
+  def self.zmsg_addmem(zmsg, byte_array)
+    rc = nil
+    FFI::MemoryPointer.new(:uint8, byte_array.size) do |p|
+      p.write_array_of_int8(byte_array)
+      rc = __zmsg_addmem(zmsg, p, byte_array.size)
+    end
+    rc
+  end
+
+  def self.zmsg_popstr(zmsg)
+    Utils.extract_string(__zmsg_popstr(zmsg))
+  end
+
+
+  ##################################################
+  # zframe-related functions
+  ##################################################
+  attach_function :__zframe_new, :zframe_new, [:buffer_in, :size_t], :pointer
+  attach_function :__zframe_new_empty, :zframe_new_empty, [], :pointer
+  attach_function :__zframe_destroy, :zframe_destroy, [:pointer], :void
+  attach_function :zframe_recv, [:pointer], :pointer
+  attach_function :zframe_recv_nowait, [:pointer], :pointer
+  attach_function :__zframe_send, :zframe_send, [:pointer, :pointer, :int], :int
+  attach_function :zframe_size, [:pointer], :size_t
+  attach_function :zframe_dup, [:pointer], :pointer
+  attach_function :__zframe_strhex, :zframe_strhex, [:pointer], :pointer
+  attach_function :__zframe_strdup, :zframe_strdup, [:pointer], :pointer
+  attach_function :zframe_streq, [:pointer, :string], :bool
+  attach_function :zframe_more, [:pointer], :int
+  attach_function :zframe_set_more, [:pointer, :int], :void
+  attach_function :zframe_eq, [:pointer, :pointer], :bool
+  attach_function :zframe_reset, [:pointer, :buffer_in, :size_t], :void
+
+  # These are very low-level functions. Still unsure whether czmq-ffi should provide them.
+  # attach_function :zframe_data, [:pointer], :pointer
+  # attach_function :zframe_fprint, [:pointer, :string, :pointer], :void
+  # attach_function :zframe_print, [:pointer, :string], :void
+
+  def self.zframe_new(byte_array=nil)
+    if byte_array.nil?
+      __zframe_new_empty
+    else
+      zframe = nil
+      FFI::MemoryPointer.new(:uint8, byte_array.size) do |p|
+        p.write_array_of_int8(byte_array)
+        zframe = __zframe_new(p, byte_array.size)
+      end
+      zframe
+    end
+  end
+
+  def self.zframe_destroy(zframe)
+    zframe_ptr = FFI::MemoryPointer.new(:pointer)
+    zframe_ptr.write_pointer(zframe)
+    __zframe_destroy(zframe_ptr)
+  end
+
+  def self.zframe_send(zframe, zsocket, flags)
+    zframe_ptr = FFI::MemoryPointer.new(:pointer)
+    zframe_ptr.write_pointer(zframe)
+    __zframe_send(zframe_ptr, zsocket, flags)
+  end
+
+  def self.zframe_strhex(zframe)
+    Utils.extract_string(__zframe_strhex(zframe))
+  end
+
+  def self.zframe_strdup(zframe)
+    Utils.extract_string(__zframe_strdup(zframe))
   end
 
 end
