@@ -42,7 +42,7 @@ module LibCZMQ
   attach_function :zbeacon_noecho, [:pointer], :void
   attach_function :zbeacon_publish, [:pointer, :pointer, :size_t], :void
   attach_function :zbeacon_silence, [:pointer], :void
-  attach_function :zbeacon_subscribe, [:pointer, :pointer, :size_t], :void
+  attach_function :__zbeacon_subscribe, :zbeacon_subscribe, [:pointer, :pointer, :size_t], :void
   attach_function :zbeacon_unsubscribe, [:pointer], :void
   attach_function :zbeacon_socket, [:pointer], :pointer
 
@@ -51,6 +51,18 @@ module LibCZMQ
     zbeacon_ptr.write_pointer(zbeacon)
     __zbeacon_destroy(zbeacon_ptr)
   end
+
+  def self.zbeacon_subscribe(zbeacon, byte_array=nil)
+    if byte_array.nil?
+      __zbeacon_subscribe(zbeacon, nil, 0)
+    else
+      FFI::MemoryPointer.new(:uint8, byte_array.size) do |p|
+        p.write_array_of_int8(byte_array)
+        __zbeacon_subscribe(zbeacon, p, byte_array.size)
+      end
+    end
+  end
+
 
 
   ##################################################
@@ -101,18 +113,27 @@ module LibCZMQ
   attach_function :__zmsg_send, :zmsg_send, [:pointer, :pointer], :int
   attach_function :zmsg_size, [:pointer], :size_t
   attach_function :zmsg_content_size, [:pointer], :size_t
+
+  # zframe add / remove
+  # NOTE: zmsg_push will take ownership of zframe and destroy it at the end
   attach_function :zmsg_push, [:pointer, :pointer], :int
   attach_function :zmsg_pop, [:pointer], :pointer
   # NOTE: zmsg_append will take ownership of zframe and destroy it at the end
   attach_function :__zmsg_append, :zmsg_append, [:pointer, :pointer], :int
+
+  # memory buffer add / remove
   attach_function :__zmsg_pushmem, :zmsg_pushmem, [:pointer, :buffer_in, :size_t], :int
   attach_function :__zmsg_addmem, :zmsg_addmem, [:pointer, :buffer_in, :size_t], :int
+
+  # string add / remove
   attach_function :zmsg_pushstr, [:pointer, :string, :varargs], :int
   attach_function :zmsg_addstr, [:pointer, :string, :varargs], :int
   attach_function :__zmsg_popstr, :zmsg_popstr, [:pointer], :pointer
-  # NOTE: zmsg will take ownership of zframe and destroy it at the end
+
+  # NOTE: zmsg_wrap will take ownership of zframe and destroy it at the end
   attach_function :zmsg_wrap, [:pointer, :pointer], :void
   attach_function :zmsg_unwrap, [:pointer], :pointer
+  # NOTE: zmsg_remove will simply remove the zframe without destroying it
   attach_function :zmsg_remove, [:pointer, :pointer], :void
   attach_function :zmsg_first, [:pointer], :pointer
   attach_function :zmsg_next, [:pointer], :pointer
@@ -228,6 +249,22 @@ module LibCZMQ
 
   def self.zframe_strdup(zframe)
     Utils.extract_string(__zframe_strdup(zframe))
+  end
+
+
+  ##################################################
+  # zpoller-related functions
+  ##################################################
+  attach_function :zpoller_new, [:pointer, :varargs], :pointer
+  attach_function :__zpoller_destroy, :zpoller_destroy, [:pointer], :void
+  attach_function :zpoller_wait, [:pointer, :int], :pointer
+  attach_function :zpoller_expired, [:pointer], :bool
+  attach_function :zpoller_terminated, [:pointer], :bool
+
+  def self.zpoller_destroy(zpoller)
+    zpoller_ptr = FFI::MemoryPointer.new(:pointer)
+    zpoller_ptr.write_pointer(zpoller)
+    __zpoller_destroy(zpoller_ptr)
   end
 
 end
