@@ -268,4 +268,26 @@ module LibCZMQ
     __zpoller_destroy(zpoller_ptr)
   end
 
+
+  ##################################################
+  # zloop-related functions
+  ##################################################
+  attach_function :zloop_new, [:void], :pointer
+  attach_function :__zloop_destroy, :zloop_destroy, [:pointer], :void
+  callback :zloop_callback, [:pointer, :pointer, :pointer], :int
+  attach_function :zloop_poller, [:pointer, :pointer, :zloop_callback, :pointer], :int
+  attach_function :zloop_poller_end, [:pointer, :pointer], :void
+  attach_function :zloop_set_tolerant, [:pointer, :pointer], :void
+  callback :zloop_timer_callback, [:pointer, :int, :pointer], :int
+  attach_function :zloop_timer, [:pointer, :size_t, :size_t, :zloop_timer_callback, :pointer], :int
+  attach_function :zloop_timer_end, [:pointer, :pointer], :int
+  attach_function :zloop_set_verbose, [:pointer, :bool], :void
+  attach_function :zloop_start, [:pointer], :int
+
+  def self.zloop_destroy(zloop)
+    zloop_ptr = FFI::MemoryPointer.new(:pointer)
+    zloop_ptr.write_pointer(zloop)
+    __zloop_destroy(zloop_ptr)
+  end
+
 end
