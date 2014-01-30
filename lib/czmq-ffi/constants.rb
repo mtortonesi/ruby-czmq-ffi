@@ -31,4 +31,10 @@ module CZMQ
     XSUB   => 'XSUB',
     STREAM => 'STREAM',
   }
+
+  # I/O multiplexing
+  POLL    = 1
+  POLLIN  = 1
+  POLLOUT = 2
+  POLLERR = 4
 end

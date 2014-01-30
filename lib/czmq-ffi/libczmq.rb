@@ -40,7 +40,7 @@ module LibCZMQ
   attach_function :zbeacon_hostname, [:pointer], :pointer
   attach_function :zbeacon_set_interval, [:pointer, :int], :void
   attach_function :zbeacon_noecho, [:pointer], :void
-  attach_function :zbeacon_publish, [:pointer, :pointer, :size_t], :void
+  attach_function :__zbeacon_publish, :zbeacon_publish, [:pointer, :pointer, :size_t], :void
   attach_function :zbeacon_silence, [:pointer], :void
   attach_function :__zbeacon_subscribe, :zbeacon_subscribe, [:pointer, :pointer, :size_t], :void
   attach_function :zbeacon_unsubscribe, [:pointer], :void
@@ -50,6 +50,13 @@ module LibCZMQ
     zbeacon_ptr = FFI::MemoryPointer.new(:pointer)
     zbeacon_ptr.write_pointer(zbeacon)
     __zbeacon_destroy(zbeacon_ptr)
+  end
+
+  def self.zbeacon_publish(zbeacon, byte_array)
+    FFI::MemoryPointer.new(:uint8, byte_array.size) do |p|
+      p.write_array_of_int8(byte_array)
+      __zbeacon_publish(zbeacon, p, byte_array.size)
+    end
   end
 
   def self.zbeacon_subscribe(zbeacon, byte_array=nil)
@@ -258,7 +265,6 @@ module LibCZMQ
   attach_function :zpoller_new, [:pointer, :varargs], :pointer
   attach_function :__zpoller_destroy, :zpoller_destroy, [:pointer], :void
   attach_function :zpoller_wait, [:pointer, :int], :pointer
-  attach_function :zpoller_add, [:pointer, :pointer], :int
   attach_function :zpoller_expired, [:pointer], :bool
   attach_function :zpoller_terminated, [:pointer], :bool
 
@@ -272,7 +278,7 @@ module LibCZMQ
   ##################################################
   # zloop-related functions
   ##################################################
-  attach_function :zloop_new, [:void], :pointer
+  attach_function :zloop_new, [], :pointer
   attach_function :__zloop_destroy, :zloop_destroy, [:pointer], :void
   callback :zloop_callback, [:pointer, :pointer, :pointer], :int
   attach_function :zloop_poller, [:pointer, :pointer, :zloop_callback, :pointer], :int
@@ -288,6 +294,12 @@ module LibCZMQ
     zloop_ptr = FFI::MemoryPointer.new(:pointer)
     zloop_ptr.write_pointer(zloop)
     __zloop_destroy(zloop_ptr)
+  end
+
+  def self.create_zloop_callback(func)
+    FFI::Function.new(:int, [:pointer, :pointer, :pointer]) do |zloop, zpollitem, arg|
+      func.call(zloop, zpollitem[:socket])
+    end
   end
 
 end
