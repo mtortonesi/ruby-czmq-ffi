@@ -297,8 +297,8 @@ module LibCZMQ
   end
 
   def self.create_zloop_callback(func)
-    FFI::Function.new(:int, [:pointer, :pointer, :pointer]) do |zloop, zpollitem, arg|
-      func.call(zloop, zpollitem[:socket])
+    FFI::Function.new(:int, [:pointer, :pointer, :pointer]) do |zloopbuf, zpollitembuf, arg|
+      func.call(zloopbuf, zpollitembuf, arg)
     end
   end
 
