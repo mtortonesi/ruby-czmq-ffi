@@ -1,6 +1,7 @@
 *~
 *.gem
 *.rbc
+*.swp
 .bundle
 .config
 .ruby-gemset
