@@ -25,7 +25,7 @@ If you want to try the development version of ruby-czmq-ffi, instead, just place
 this line:
 
 ```ruby
-gem ruby-czmq-ffi, git: 'https://github.com/mtortonesi/ruby-czmq-ffi.git'
+gem 'czmq-ffi', git: 'https://github.com/mtortonesi/ruby-czmq-ffi.git'
 ```
 
 in your Gemfile and run:
